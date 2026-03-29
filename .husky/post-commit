@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# ink post-commit hook
+# Auto-pushes to the current branch's remote after every commit.
+
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+REMOTE=$(git config "branch.$BRANCH.remote" 2>/dev/null || echo "origin")
+
+if [ -n "$BRANCH" ]; then
+  git push "$REMOTE" "$BRANCH" --quiet 2>/dev/null &
+fi

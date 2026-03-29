@@ -1,0 +1,40 @@
+{
+  "name": "create-ink",
+  "version": "1.0.0",
+  "description": "Scaffold AI-native projects with structured versioning, changelogs, and agent memory",
+  "type": "module",
+  "bin": {
+    "create-ink": "bin/create-ink.js"
+  },
+  "files": [
+    "bin/",
+    "templates/"
+  ],
+  "keywords": [
+    "ai",
+    "agents",
+    "scaffold",
+    "conventional-commits",
+    "changelog",
+    "versioning",
+    "create",
+    "husky"
+  ],
+  "author": "Baptiste Briel",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baptistebriel/ink.git"
+  },
+  "homepage": "https://github.com/baptistebriel/ink",
+  "bugs": {
+    "url": "https://github.com/baptistebriel/ink/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "ink": "node .ink/cli.js",
+    "prepare": "husky || true"
+  }
+}

@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# ink pre-push hook
+# Safety net: validates outgoing fix/feat commits have history files.
+# Catches commits made with --no-verify that bypassed commit-msg hook.
+# Only checks commits where .ink/cli.js exists in the tree (ink v2 active).
+
+REMOTE="$1"
+URL="$2"
+
+while read LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
+  # Skip deletes
+  if [ "$LOCAL_SHA" = "0000000000000000000000000000000000000000" ]; then
+    continue
+  fi
+
+  # Determine range of new commits
+  if [ "$REMOTE_SHA" = "0000000000000000000000000000000000000000" ]; then
+    RANGE="$LOCAL_SHA"
+  else
+    RANGE="$REMOTE_SHA..$LOCAL_SHA"
+  fi
+
+  COMMITS=$(git rev-list "$RANGE" 2>/dev/null)
+  for COMMIT in $COMMITS; do
+    MSG=$(git log --format=%s -n 1 "$COMMIT")
+    TYPE=$(echo "$MSG" | sed -E 's/^([a-z]+)(\(.+\))?(!)?: .+/\1/')
+
+    if [ "$TYPE" = "fix" ] || [ "$TYPE" = "feat" ]; then
+      # Only validate if .ink/cli.js existed at this commit (ink v2 was active)
+      if ! git cat-file -e "$COMMIT:.ink/cli.js" 2>/dev/null; then
+        continue
+      fi
+
+      HAS_HISTORY=$(git diff-tree --root --no-commit-id --name-only -r "$COMMIT" | grep -c "^\.ink/history/.*\.md$")
+      if [ "$HAS_HISTORY" -eq 0 ]; then
+        echo ""
+        echo "  ✗ Push rejected — commit ${COMMIT:0:7} is missing a history file"
+        echo ""
+        echo "  Commit: $MSG"
+        echo "  Type:   $TYPE (requires .ink/history/<version>.md)"
+        echo ""
+        echo "  This commit was likely made with --no-verify, bypassing the hook."
+        echo "  To fix:"
+        echo "    1. node .ink/cli.js bump $TYPE"
+        echo "    2. Fill in .ink/history/<version>.md"
+        echo "    3. git add -A && git commit --amend"
+        echo "    4. git push"
+        echo ""
+        exit 1
+      fi
+    fi
+  done
+done
+
+exit 0

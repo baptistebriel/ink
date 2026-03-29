@@ -1,0 +1,92 @@
+#!/bin/sh
+
+# ink commit-msg hook
+# Validates:
+# 1. Conventional commit format
+# 2. For fix:/feat: commits — history file must be staged
+
+COMMIT_MSG_FILE="$1"
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# ─── Skip merge commits ─────────────────────────────────────────────
+if echo "$COMMIT_MSG" | grep -qE "^Merge "; then
+  exit 0
+fi
+
+# ─── Validate conventional commit format ─────────────────────────────
+VALID_PATTERN="^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\(.+\))?(!)?: .+"
+
+if ! echo "$COMMIT_MSG" | head -1 | grep -qE "$VALID_PATTERN"; then
+  echo ""
+  echo "  ✗ Invalid commit message format"
+  echo ""
+  echo "  Expected: <type>: <description>"
+  echo "  Types: feat, fix, chore, docs, style, refactor, perf, test, build, ci, revert"
+  echo ""
+  echo "  Examples:"
+  echo "    fix: resolve auth race condition"
+  echo "    feat: add user profile page"
+  echo "    chore: update dependencies"
+  echo ""
+  echo "  Your message: $COMMIT_MSG"
+  echo ""
+  exit 1
+fi
+
+# ─── Extract commit type ────────────────────────────────────────────
+COMMIT_TYPE=$(echo "$COMMIT_MSG" | head -1 | sed -E 's/^([a-z]+)(\(.+\))?(!)?: .+/\1/')
+
+# ─── For fix/feat: validate history file exists ──────────────────────
+if [ "$COMMIT_TYPE" = "fix" ] || [ "$COMMIT_TYPE" = "feat" ]; then
+  # Read version from ink.config.json
+  if [ ! -f "ink.config.json" ]; then
+    echo ""
+    echo "  ✗ ink.config.json not found"
+    echo "  Run: node .ink/cli.js bump $COMMIT_TYPE"
+    echo ""
+    exit 1
+  fi
+
+  VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('ink.config.json','utf-8')).version)" 2>/dev/null)
+  if [ -z "$VERSION" ]; then
+    echo ""
+    echo "  ✗ Could not read version from ink.config.json"
+    echo ""
+    exit 1
+  fi
+
+  HISTORY_PATH=".ink/history/$VERSION.md"
+
+  # Check if history file is staged
+  if ! git diff --cached --name-only | grep -q "^\.ink/history/${VERSION}\.md$"; then
+    echo ""
+    echo "  ✗ Missing history file for version $VERSION"
+    echo ""
+    echo "  Fix/feat commits require a history entry."
+    echo "  Run these steps:"
+    echo ""
+    echo "    1. node .ink/cli.js bump $COMMIT_TYPE"
+    echo "    2. Fill in .ink/history/$VERSION.md"
+    echo "    3. git add -A"
+    echo "    4. git commit -m \"$COMMIT_MSG\""
+    echo ""
+    exit 1
+  fi
+
+  # Check history file has actual content (not just template)
+  CONTENT=$(git show ":$HISTORY_PATH" 2>/dev/null || cat "$HISTORY_PATH" 2>/dev/null)
+  if echo "$CONTENT" | grep -q "<!-- Describe what changed and why -->"; then
+    REAL_CONTENT=$(echo "$CONTENT" | grep -v "^#" | grep -v "^>" | grep -v "^$" | grep -v "^<!--" | grep -v "^-->" | head -5)
+    if [ -z "$REAL_CONTENT" ]; then
+      echo ""
+      echo "  ✗ History file is still a template"
+      echo ""
+      echo "  Please fill in .ink/history/$VERSION.md with actual content."
+      echo "  At minimum, describe what changed under '## What changed'."
+      echo ""
+      exit 1
+    fi
+  fi
+fi
+
+exit 0
