@@ -77,6 +77,22 @@ node .ink/cli.js log                      # Print version history
 node .ink/cli.js current                  # Print current version number
 ```
 
+## Brain File
+
+This project uses `BRAIN.md` as living memory — it captures decisions, progress, context, and learnings across sessions.
+
+- **Read `BRAIN.md` at session start** — it has context from prior sessions so you don't repeat work or re-discover things
+- **Update `BRAIN.md` before committing** — capture what you decided, what you learned, what's next
+- The pre-commit hook will remind you if `BRAIN.md` isn't staged
+
+`AGENTS.md` is *rules* (how to work). `BRAIN.md` is *state* (what's happened). Both matter.
+
+### Quick orientation
+
+```bash
+node .ink/cli.js context    # Outputs version + latest history + BRAIN.md — one command, full picture
+```
+
 ## Why This Matters
 
 - Every meaningful change is documented with context

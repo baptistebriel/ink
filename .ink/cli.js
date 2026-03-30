@@ -12,13 +12,14 @@
  *   node .ink/cli.js current        Print current version number
  */
 
-import { readFile, writeFile, mkdir, readdir, access } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir, access, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
 const CONFIG_FILE = join(ROOT, "ink.config.json");
 const INK_DIR = join(ROOT, ".ink");
 const HISTORY_DIR = join(INK_DIR, "history");
+const BRAIN_FILE = join(ROOT, "BRAIN.md");
 
 // ─── Helpers ────────────────────────────────────────────────────────
 async function exists(path) {
@@ -147,13 +148,33 @@ async function cmdStatus() {
   const version = config.version;
   const versionFile = join(HISTORY_DIR, `${version}.md`);
   const hasHistory = await exists(versionFile);
+  const hasBrain = await exists(BRAIN_FILE);
+
+  let brainStatus = "✗ missing";
+  if (hasBrain) {
+    const brainStat = await stat(BRAIN_FILE);
+    const ago = timeSince(brainStat.mtime);
+    brainStatus = `✓ BRAIN.md (updated ${ago})`;
+  }
 
   console.log(`
   🖊  ink status
 
   Version:   ${version}
   History:   ${hasHistory ? `✓ .ink/history/${version}.md` : `✗ missing — run: node .ink/cli.js bump <type>`}
+  Brain:     ${brainStatus}
   `);
+}
+
+function timeSince(date) {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 async function cmdLog() {
@@ -216,6 +237,55 @@ async function cmdCurrent() {
   console.log(config.version);
 }
 
+async function cmdContext() {
+  const config = await readConfig();
+  const version = config.version;
+
+  console.log(`\n  🖊  ink context — ${config.name || "project"} v${version}\n`);
+  console.log("─".repeat(60));
+
+  // Latest history file
+  if (await exists(HISTORY_DIR)) {
+    const entries = await readdir(HISTORY_DIR);
+    const versions = entries
+      .filter((e) => e.endsWith(".md"))
+      .map((e) => e.replace(".md", ""))
+      .sort((a, b) => {
+        const pa = a.split(".").map(Number);
+        const pb = b.split(".").map(Number);
+        for (let i = 0; i < 3; i++) {
+          if (pa[i] !== pb[i]) return pb[i] - pa[i];
+        }
+        return 0;
+      });
+
+    if (versions.length > 0) {
+      const latest = versions[0];
+      const content = await readFile(join(HISTORY_DIR, `${latest}.md`), "utf-8");
+      console.log(`\n  Latest history: .ink/history/${latest}.md\n`);
+      for (const line of content.split("\n")) {
+        console.log(`  ${line}`);
+      }
+    }
+  }
+
+  console.log("\n" + "─".repeat(60));
+
+  // BRAIN.md
+  if (await exists(BRAIN_FILE)) {
+    const brain = await readFile(BRAIN_FILE, "utf-8");
+    const brainStat = await stat(BRAIN_FILE);
+    console.log(`\n  Brain: BRAIN.md (updated ${timeSince(brainStat.mtime)})\n`);
+    for (const line of brain.split("\n")) {
+      console.log(`  ${line}`);
+    }
+  } else {
+    console.log("\n  Brain: no BRAIN.md found\n");
+  }
+
+  console.log("\n" + "─".repeat(60) + "\n");
+}
+
 // ─── Main ───────────────────────────────────────────────────────────
 const [command, ...args] = process.argv.slice(2);
 
@@ -236,6 +306,9 @@ switch (command) {
   case "current":
     await cmdCurrent();
     break;
+  case "context":
+    await cmdContext();
+    break;
   default:
     console.log(`
   🖊  ink — AI-native version management
@@ -245,10 +318,12 @@ switch (command) {
     status                     Show current version info
     log                        Print version history
     current                    Print current version number
+    context                    Full project context (version + history + brain)
 
   Examples:
     node .ink/cli.js bump fix       Patch bump (bug fix)
     node .ink/cli.js bump feat      Minor bump (new feature)
     node .ink/cli.js bump breaking  Major bump (breaking change)
+    node .ink/cli.js context        Get oriented at session start
     `);
 }

@@ -14,7 +14,8 @@ AI coding agents ship code fast — but without structure, projects lose context
 - **Version bumping** tied to commit type — `fix:` = patch, `feat:` = minor, `breaking` = major
 - **A history file per version** — agents document what changed, why, and what they learned
 - **AGENTS.md** — a single instruction file that any AI tool reads on session start
-- **Git hooks that can't be skipped** — `commit-msg` validates on commit, `pre-push` catches `--no-verify` bypasses, `post-commit` auto-pushes
+- **BRAIN.md** — living project memory that agents update every session (decisions, progress, context, learnings)
+- **Git hooks that can't be skipped** — `commit-msg` validates on commit, `pre-commit` reminds you to update the brain, `pre-push` catches `--no-verify` bypasses, `post-commit` auto-pushes
 
 The result: a project any agent or human can pick up and immediately understand.
 
@@ -37,36 +38,43 @@ npx create-ink init
 ```
 my-project/
   ink.config.json      ← project config (includes version)
-  AGENTS.md            ← agent instructions
+  AGENTS.md            ← agent instructions (rules — how to work)
+  BRAIN.md             ← project memory (state — what's happened)
   .ink/
     cli.js             ← version management CLI
     history/
       0.0.1.md         ← first version history
   .husky/
     commit-msg         ← validates commits + history files
+    pre-commit         ← reminds to update BRAIN.md
     pre-push           ← catches --no-verify bypasses
     post-commit        ← auto-pushes after commit
   package.json
 ```
 
-Two visible files at root: `ink.config.json` and `AGENTS.md`. Everything else is hidden.
+Three visible files at root: `ink.config.json`, `AGENTS.md`, and `BRAIN.md`. Everything else is hidden.
 
 ## Workflow
 
 ```bash
+# 0. Get oriented (start of session)
+node .ink/cli.js context
+
 # 1. Make code changes
 
-# 2. Bump version
+# 2. Update BRAIN.md with decisions/progress
+
+# 3. Bump version
 node .ink/cli.js bump fix     # 0.0.1 → 0.0.2
 node .ink/cli.js bump feat    # 0.0.1 → 0.1.0
 
-# 3. Fill in .ink/history/<version>.md
+# 4. Fill in .ink/history/<version>.md
 
-# 4. Commit
+# 5. Commit
 git add -A && git commit -m "fix: resolve auth race condition"
 ```
 
-The commit is rejected if the message isn't conventional, or if a `fix:`/`feat:` commit is missing its history file.
+The commit is rejected if the message isn't conventional, or if a `fix:`/`feat:` commit is missing its history file. You'll also get a reminder if `BRAIN.md` isn't staged.
 
 ## History Files
 
@@ -94,12 +102,35 @@ Next: rate limiting for the OAuth endpoint.
 
 Only `## What changed` is required. The rest is optional — agents include what's relevant and skip the rest. Failed attempts, dead ends, and architectural decisions all get captured so they're not repeated.
 
+## Brain File
+
+`BRAIN.md` is the project's living memory. History files capture *what changed per version*. The brain captures *everything else* — decisions, progress, context, and learnings that span across versions.
+
+```markdown
+# BRAIN.md
+
+## Decisions
+Chose Postgres over SQLite — need concurrent writes for the webhook handler.
+
+## Progress
+Auth flow complete. Next: rate limiting on /api/oauth.
+
+## Context
+Redis is optional — only needed if we add caching later. Don't install it yet.
+
+## Learned
+The OAuth provider rate-limits token refreshes to 10/min per client.
+```
+
+Agents read it at session start, update it before committing. The `pre-commit` hook reminds you if it's not staged — but never blocks, so rapid prototyping stays fast.
+
 ## Commands
 
 ```bash
 node .ink/cli.js bump fix|feat|breaking   # Bump version, create history file
-node .ink/cli.js status                   # Show current version
+node .ink/cli.js status                   # Show current version + brain status
 node .ink/cli.js log                      # Print version history
+node .ink/cli.js context                  # Full project context for session start
 ```
 
 ## FAQ
