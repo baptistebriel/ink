@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# ink pre-commit hook
+# Reminds agents to update the project brain (BRAIN.md)
+
+if ! git diff --cached --name-only | grep -q "^BRAIN.md$"; then
+  echo ""
+  echo "  ℹ BRAIN.md not staged — remember to update the brain."
+  echo ""
+fi
+
+# Always pass — this is a reminder, not a blocker
+exit 0

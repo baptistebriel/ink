@@ -1,6 +1,6 @@
 {
   "name": "create-ink",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Scaffold AI-native projects with structured versioning, changelogs, and agent memory",
   "type": "module",
   "bin": {

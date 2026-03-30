@@ -42,8 +42,9 @@ function printUsage() {
   What it sets up:
     • ink.config.json — single config file (includes version)
     • AGENTS.md — universal agent instructions
+    • BRAIN.md — living project memory (decisions, progress, context)
     • .ink/ — CLI + per-version history files
-    • .husky/ — commit-msg, pre-push, post-commit hooks
+    • .husky/ — commit-msg, pre-commit, pre-push, post-commit hooks
   `);
 }
 
@@ -104,6 +105,15 @@ async function scaffold(projectDir, projectName) {
   );
   console.log("  ✓ AGENTS.md");
 
+  // BRAIN.md
+  const brainPath = join(projectDir, "BRAIN.md");
+  if (!(await exists(brainPath))) {
+    await copyTemplate("brain/BRAIN.md", brainPath);
+    console.log("  ✓ BRAIN.md");
+  } else {
+    console.log("  ✓ BRAIN.md (already exists, kept)");
+  }
+
   // .husky/ hooks
   const huskyDir = join(projectDir, ".husky");
   await mkdir(huskyDir, { recursive: true });
@@ -114,6 +124,10 @@ async function scaffold(projectDir, projectName) {
   await copyTemplate("hooks/pre-push", join(huskyDir, "pre-push"));
   await chmod(join(huskyDir, "pre-push"), 0o755);
   console.log("  ✓ .husky/pre-push");
+
+  await copyTemplate("hooks/pre-commit", join(huskyDir, "pre-commit"));
+  await chmod(join(huskyDir, "pre-commit"), 0o755);
+  console.log("  ✓ .husky/pre-commit");
 
   await copyTemplate("hooks/post-commit", join(huskyDir, "post-commit"));
   await chmod(join(huskyDir, "post-commit"), 0o755);
@@ -180,13 +194,15 @@ async function scaffold(projectDir, projectName) {
     git add -A && git commit -m "chore: initialize ink scaffold"
 
   Workflow for AI agents (and humans):
+    0. Run: node .ink/cli.js context      (get oriented)
     1. Make code changes
-    2. Run: node .ink/cli.js bump fix     (or feat)
-    3. Fill in .ink/history/<version>.md
-    4. Commit: git commit -m "fix: description"
+    2. Update BRAIN.md with decisions/progress
+    3. Run: node .ink/cli.js bump fix     (or feat)
+    4. Fill in .ink/history/<version>.md
+    5. Commit: git commit -m "fix: description"
 
-  The hooks enforce conventional commits and validate
-  history files exist for fix/feat commits.
+  The hooks enforce conventional commits, validate history
+  files for fix/feat commits, and remind you to update BRAIN.md.
   `);
 }
 
