@@ -13,7 +13,7 @@ AI coding agents ship code fast — but without structure, projects lose context
 - **Conventional commits** enforced via git hooks — every commit has a clear type and description
 - **Version bumping** tied to commit type — `fix:` = patch, `feat:` = minor, `breaking` = major
 - **A history file per version** — agents document what changed, why, and what they learned
-- **CLAUDE.md + AGENTS.md** — instruction files that AI tools read on session start (Claude Code reads `CLAUDE.md`, Cursor/others read `AGENTS.md`)
+- **Agent instructions for every major tool** — `CLAUDE.md` (Claude Code), `AGENTS.md` (Cursor, Cline, pi, Aider, Continue), `.github/copilot-instructions.md` (GitHub Copilot)
 - **Git hooks that can't be skipped** — `commit-msg` validates on commit, `pre-push` catches `--no-verify` bypasses, `post-commit` auto-pushes
 
 The result: a project any agent or human can pick up and immediately understand.
@@ -38,7 +38,9 @@ npx create-ink init
 my-project/
   ink.config.json      ← project config (includes version)
   CLAUDE.md            ← agent instructions (Claude Code)
-  AGENTS.md            ← agent instructions (Cursor, pi, etc.)
+  AGENTS.md            ← agent instructions (Cursor, Cline, pi, Aider, Continue)
+  .github/
+    copilot-instructions.md  ← agent instructions (GitHub Copilot)
   .ink/
     cli.js             ← version management CLI
     history/
@@ -50,7 +52,7 @@ my-project/
   package.json
 ```
 
-Three visible files at root: `ink.config.json`, `CLAUDE.md`, and `AGENTS.md`. Everything else is hidden.
+Same instructions, three files — every major AI coding tool picks them up automatically.
 
 ## Workflow
 

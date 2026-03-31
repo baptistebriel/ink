@@ -41,7 +41,7 @@ function printUsage() {
 
   What it sets up:
     • ink.config.json — single config file (includes version)
-    • CLAUDE.md + AGENTS.md — universal agent instructions
+    • CLAUDE.md, AGENTS.md, .github/copilot-instructions.md — agent instructions for all major AI tools
     • .ink/ — CLI + per-version history files
     • .husky/ — commit-msg, pre-push, post-commit hooks
   `);
@@ -96,20 +96,20 @@ async function scaffold(projectDir, projectName) {
   );
   console.log(`  ✓ .ink/history/${existingVersion}.md`);
 
-  // CLAUDE.md + AGENTS.md (both point to same instructions)
-  await copyTemplate(
-    "agent-instructions/AGENTS.md",
-    join(projectDir, "CLAUDE.md"),
-    { projectName }
-  );
-  console.log("  ✓ CLAUDE.md");
-
-  await copyTemplate(
-    "agent-instructions/AGENTS.md",
-    join(projectDir, "AGENTS.md"),
-    { projectName }
-  );
-  console.log("  ✓ AGENTS.md");
+  // Agent instructions — generate for all major AI coding tools
+  // CLAUDE.md (Claude Code), AGENTS.md (Cursor, Cline, pi, Aider, Continue),
+  // .github/copilot-instructions.md (GitHub Copilot)
+  const instructions = [
+    { dest: "CLAUDE.md", label: "CLAUDE.md" },
+    { dest: "AGENTS.md", label: "AGENTS.md" },
+    { dest: ".github/copilot-instructions.md", label: ".github/copilot-instructions.md" },
+  ];
+  for (const { dest, label } of instructions) {
+    const destPath = join(projectDir, dest);
+    await mkdir(dirname(destPath), { recursive: true });
+    await copyTemplate("agent-instructions/AGENTS.md", destPath, { projectName });
+    console.log(`  ✓ ${label}`);
+  }
 
   // .husky/ hooks
   const huskyDir = join(projectDir, ".husky");
