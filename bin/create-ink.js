@@ -41,7 +41,7 @@ function printUsage() {
 
   What it sets up:
     • ink.config.json — single config file (includes version)
-    • AGENTS.md — universal agent instructions
+    • CLAUDE.md + AGENTS.md — universal agent instructions
     • .ink/ — CLI + per-version history files
     • .husky/ — commit-msg, pre-push, post-commit hooks
   `);
@@ -96,7 +96,14 @@ async function scaffold(projectDir, projectName) {
   );
   console.log(`  ✓ .ink/history/${existingVersion}.md`);
 
-  // AGENTS.md
+  // CLAUDE.md + AGENTS.md (both point to same instructions)
+  await copyTemplate(
+    "agent-instructions/AGENTS.md",
+    join(projectDir, "CLAUDE.md"),
+    { projectName }
+  );
+  console.log("  ✓ CLAUDE.md");
+
   await copyTemplate(
     "agent-instructions/AGENTS.md",
     join(projectDir, "AGENTS.md"),
